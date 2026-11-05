@@ -1,0 +1,22 @@
+# =====================================================
+#  .gitignore — vprofile Maven project
+# =====================================================
+target/
+*.war
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# Secrets (never commit these)
+*.properties.local
+.env
+
+# OS
+.DS_Store
+Thumbs.db

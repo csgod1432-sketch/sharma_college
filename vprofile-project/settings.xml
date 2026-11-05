@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  settings.xml — Maven settings for Nexus / CodeArtifact artifact repository
+  Copy this file to: C:\Users\<you>\.m2\settings.xml  (Windows)
+                  or: ~/.m2/settings.xml               (Linux)
+
+  Fill in the <password> and <url> values before using.
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+          http://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+    <!-- =====================================================================
+         Server credentials
+         The <id> must match the ones in pom.xml distributionManagement
+    ====================================================================== -->
+    <servers>
+        <server>
+            <id>vprofile-release</id>
+            <username>${REPO_USERNAME}</username>     <!-- e.g. admin -->
+            <password>${REPO_PASSWORD}</password>     <!-- Nexus/CodeArtifact password -->
+        </server>
+        <server>
+            <id>vprofile-snapshot</id>
+            <username>${REPO_USERNAME}</username>
+            <password>${REPO_PASSWORD}</password>
+        </server>
+    </servers>
+
+    <!-- =====================================================================
+         Mirror — route Maven Central through your Nexus/CodeArtifact repo
+    ====================================================================== -->
+    <mirrors>
+        <mirror>
+            <id>nexus</id>
+            <name>vprofile Nexus Mirror</name>
+            <!-- Replace with your Nexus or CodeArtifact URL -->
+            <url>${NEXUS_URL}/repository/maven-public/</url>
+            <mirrorOf>*</mirrorOf>
+        </mirror>
+    </mirrors>
+
+    <!-- =====================================================================
+         Profile — sets the repo URLs used by pom.xml
+    ====================================================================== -->
+    <profiles>
+        <profile>
+            <id>nexus</id>
+            <properties>
+                <!-- These are picked up by pom.xml distributionManagement -->
+                <ARTIFACT_REPO_URL>${NEXUS_URL}/repository/vprofile-release/</ARTIFACT_REPO_URL>
+                <ARTIFACT_REPO_SNAPSHOT_URL>${NEXUS_URL}/repository/vprofile-snapshot/</ARTIFACT_REPO_SNAPSHOT_URL>
+            </properties>
+        </profile>
+    </profiles>
+
+    <activeProfiles>
+        <activeProfile>nexus</activeProfile>
+    </activeProfiles>
+
+</settings>
