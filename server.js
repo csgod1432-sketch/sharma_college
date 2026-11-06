@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const app = express();
 const path = require('path');
@@ -17,32 +18,12 @@ app.use(express.static(__dirname));
 // ─────────────────────────────────────────────
 // MYSQL CONNECTION POOL
 // ─────────────────────────────────────────────
-// Edit host / user / password / database to match your MySQL setup.
-// If you have not created the DB yet, run the SQL in the comment block below.
-/*
-  CREATE DATABASE IF NOT EXISTS sharma_erp;
-  USE sharma_erp;
-
-  CREATE TABLE IF NOT EXISTS users (
-      id          INT AUTO_INCREMENT PRIMARY KEY,
-      roll_no     VARCHAR(50)  NOT NULL UNIQUE,
-      email       VARCHAR(100) NOT NULL UNIQUE,
-      password    VARCHAR(255) NOT NULL,          -- bcrypt hash
-      first_name  VARCHAR(100),
-      middle_name VARCHAR(100),
-      last_name   VARCHAR(100),
-      course      VARCHAR(50),
-      year        VARCHAR(20),
-      role        ENUM('student','college','admin') DEFAULT 'student',
-      photo_url   TEXT,
-      created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-*/
+// Configured for AWS RDS MySQL
 const pool = mysql.createPool({
-    host:     process.env.DB_HOST     || 'localhost',
+    host:     process.env.DB_HOST     || 'sharmaclg-mysqldb.cpqwu6oa0z14.eu-north-1.rds.amazonaws.com',
     port:     process.env.DB_PORT     || 3306,
-    user:     process.env.DB_USER     || 'root',
-    password: process.env.DB_PASS     || '',       // ← set your MySQL password here
+    user:     process.env.DB_USER     || 'admin',
+    password: process.env.DB_PASS     || 'HzuODLDOXfeJgvmOVToH',
     database: process.env.DB_NAME     || 'sharma_erp',
     waitForConnections: true,
     connectionLimit: 10

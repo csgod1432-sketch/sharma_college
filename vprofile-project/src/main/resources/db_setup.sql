@@ -25,4 +25,4 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Optional: index for faster email lookups
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX idx_users_email ON users(email);
