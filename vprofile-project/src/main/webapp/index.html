@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sharma College ERP Portal - A premium, AI-driven academic management system for students, faculty, and administrators.">
+  <meta name="keywords" content="Sharma College, ERP, Academic Management, Student Portal, Faculty Dashboard">
+  <meta property="og:title" content="Sharma College | ERP Portal">
+  <meta property="og:description" content="Manage your academic life with ease on the Sharma College ERP.">
+  <title>Sharma College | ERP Portal</title>
+  <link rel="icon" type="image/png" href="sharma-logo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+  <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- FIREBASE INTEGRATION - FULL REAL-TIME SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+    import {
+      getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail
+    } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+    import {
+      getFirestore, collection, addDoc, getDocs, doc, setDoc, getDoc,
+      updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+    import { 
+      getStorage, ref, uploadBytes, getDownloadURL 
+    } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDsaMPVHHMKq2ZtvbqeE3JQ9gPNYOHgqpo",
+      authDomain: "rebel-f3c26.firebaseapp.com",
+      projectId: "rebel-f3c26",
+      storageBucket: "rebel-f3c26.firebasestorage.app",
+      messagingSenderId: "979024407984",
+      appId: "1:979024407984:web:58c964a59ff76a96cc3a75"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    window.firebaseAuth = getAuth(app);
+    window.firebaseDb = getFirestore(app);
+    window.firebaseStorage = getStorage(app);
+
+    // Auth methods
+    window.fbSignIn = signInWithEmailAndPassword;
+    window.fbSignUp = createUserWithEmailAndPassword;
+    window.fbSignOut = signOut;
+    window.fbSendPasswordResetEmail = sendPasswordResetEmail;
+
+    // Firestore CRUD
+    window.fbAddDoc = addDoc;
+    window.fbCollection = collection;
+    window.getDocs = getDocs;
+    window.fbDoc = doc;
+    window.fbSetDoc = setDoc;
+    window.fbGetDoc = getDoc;
+    window.fbUpdateDoc = updateDoc;
+    window.fbDeleteDoc = deleteDoc;
+
+    // Firestore query & realtime
+    window.fbQuery = query;
+    window.fbWhere = where;
+    window.fbOrderBy = orderBy;
+    window.fbOnSnapshot = onSnapshot;
+    window.fbServerTimestamp = serverTimestamp;
+
+    // Firebase Storage
+    window.fbStorageRef = ref;
+    window.fbUploadBytes = uploadBytes;
+    window.fbGetDownloadURL = getDownloadURL;
+  </script>
+</head>
+
+<body>
+
+  <div class="watermark"></div>
+
+  <section id="loginSection">
+    <div class="login-box" id="authBox" style="padding: 0; overflow: hidden;">
+      <!-- WAVE HEADER -->
+      <div class="wave-header">
+        <i data-lucide="user-circle"></i>
+        <h2 id="authTitle">Portal Login</h2>
+      </div>
+
+      <div style="padding: 0 45px 45px;">
+        <p id="authDesc" style="color: #64748b; font-size: 13px; margin-bottom: 25px; text-align: center;">Enter your credentials to continue</p>
+
+        <!-- Role Selector (only for login) -->
+        <div id="roleSelector" style="background: #f1f5f9; padding: 6px; border-radius: 16px; display: flex; gap: 8px; margin-bottom: 30px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+          <div class="role-btn active" onclick="setRole('student', this)">Student</div>
+          <div class="role-btn" onclick="setRole('college', this)">Faculty</div>
+          <div class="role-btn" onclick="setRole('admin', this)">Admin</div>
+        </div>
+
+        <!-- Step 1: Personal Details (Signup only) -->
+        <div id="signupStep1" style="display: none; animation: fadeIn 0.4s ease;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+             <input type="text" id="regFirstName" placeholder="First Name *" class="bw-input">
+             <input type="text" id="regLastName" placeholder="Last Name *" class="bw-input">
+          </div>
+          <input type="text" id="regMiddleName" placeholder="Middle Name" class="bw-input" style="margin-bottom:15px;">
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+             <input type="text" id="regRollNo" placeholder="Roll Number *" oninput="handleRollNoDetection(this.value)" class="bw-input">
+             <select id="regCourse" class="bw-input" style="background:white;">
+                <option value="" disabled selected>Select Course *</option>
+                <option value="BCA">BCA</option>
+                <option value="BSc IT">BSc IT</option>
+                <option value="BMS">BMS</option>
+                <option value="B.Com">B.Com</option>
+             </select>
+          </div>
+          <input type="text" id="regYear" placeholder="Year (e.g. 2025-2028) *" class="bw-input" style="margin-bottom:20px;">
+          <div id="detectionStatus" style="font-size: 11px; color: #000; display: none; margin-top: -15px; margin-bottom: 20px; text-align: center;">🔍 Checking records...</div>
+          
+          <button class="btn-action" onclick="goToStep2()">Next Step</button>
+        </div>
+
+        <!-- Step 2: Account Details (Signup only) -->
+        <div id="signupStep2" style="display: none; animation: fadeIn 0.4s ease;">
+          <input type="email" id="regEmail" placeholder="Institutional Email *" class="bw-input" style="margin-bottom:15px;">
+          
+          <div style="position: relative; margin-bottom: 15px;">
+            <input type="password" id="regPass" placeholder="Create Password *" class="bw-input">
+            <span onclick="togglePass('regPass', this)" style="position: absolute; right: 15px; top: 15px; cursor: pointer; color: #64748b;">👁️</span>
+          </div>
+
+          <div style="position: relative; margin-bottom: 15px;">
+            <input type="password" id="regConfirmPass" placeholder="Confirm Password *" class="bw-input">
+            <span onclick="togglePass('regConfirmPass', this)" style="position: absolute; right: 15px; top: 15px; cursor: pointer; color: #64748b;">👁️</span>
+          </div>
+
+          <!-- SECURITY QUESTION (NEW) -->
+          <div style="margin-bottom: 15px;">
+             <select id="regSecurityQuestion" class="bw-input" style="background:white; margin-bottom: 15px;">
+                <option value="" disabled selected>Security Question *</option>
+                <option value="What is your first school name?">What is your first school name?</option>
+                <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+                <option value="What was your first pet's name?">What was your first pet's name?</option>
+                <option value="What is your favorite book?">What is your favorite book?</option>
+             </select>
+             <input type="text" id="regSecurityAnswer" placeholder="Your Answer *" class="bw-input">
+          </div>
+
+          <div style="display: flex; gap: 12px;">
+            <button class="btn-action" onclick="backToStep1()" style="background: #f1f5f9 !important; color: #000 !important; border: 1px solid #e2e8f0; flex: 1; box-shadow: none;">Back</button>
+            <button class="btn-action" id="regSubmitBtn" onclick="handleRegistration()" style="flex: 2;">Create Account</button>
+          </div>
+        </div>
+
+        <!-- Login View -->
+        <div id="loginForm">
+          <input type="email" id="userEmail" placeholder="Institutional Email" class="bw-input" style="margin-bottom:15px;">
+          <div style="position: relative; margin-bottom: 15px;">
+            <input type="password" id="userPass" placeholder="Password" class="bw-input">
+            <span onclick="togglePass('userPass', this)" style="position: absolute; right: 15px; top: 15px; cursor: pointer; color: #64748b;">👁️</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 30px; color: #64748b;">
+            <span style="cursor: pointer; color: #000; font-weight: 700;" onclick="toggleAuthMode()" id="authModeBtn">Sign Up</span>
+            <span style="cursor: pointer; color: #000; font-weight: 600;" onclick="toggleForgotPassword(true)">Forgot Password?</span>
+          </div>
+          <button class="btn-action" id="authSubmitBtn" onclick="handleAuth()">Login</button>
+        </div>
+
+        <!-- Forgot Password View (NEW) -->
+        <div id="forgotPasswordForm" style="display: none; animation: fadeIn 0.4s ease;">
+           <div id="fpStepEmail">
+             <p style="font-size: 12px; color: #64748b; margin-bottom: 20px; text-align: center;">Enter your email to retrieve your security question.</p>
+             <input type="email" id="fpEmail" placeholder="Institutional Email" class="bw-input" style="margin-bottom:15px;">
+             <button class="btn-action" onclick="handleRequestQuestion()">Verify Email</button>
+           </div>
+           
+           <div id="fpStepQuestion" style="display: none;">
+             <p id="fpQuestionText" style="font-size: 14px; font-weight: 700; color: #000; margin-bottom: 15px; text-align: center;">Your Security Question</p>
+             <input type="text" id="fpAnswer" placeholder="Your Answer" class="bw-input" style="margin-bottom:15px;">
+             <button class="btn-action" onclick="handleVerifyAnswer()">Reset Password</button>
+           </div>
+
+           <div id="fpStepSuccess" style="display: none;">
+             <div style="text-align: center; padding: 20px 0;">
+                <i data-lucide="check-circle" style="width: 48px; height: 48px; color: #10b981; margin-bottom: 15px;"></i>
+                <p style="font-size: 14px; color: #000; font-weight: 600;">Success!</p>
+                <p style="font-size: 12px; color: #64748b; margin-top: 5px;">A password reset link has been sent to your email.</p>
+             </div>
+           </div>
+
+           <div style="text-align: center; margin-top: 25px;">
+              <span style="cursor: pointer; color: #000; font-weight: 700; font-size: 13px;" onclick="toggleForgotPassword(false)">← Back to Login</span>
+           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="adminDashboard" style="display:none;">
+    <aside class="sidebar">
+      <div class="logo-area">
+        <img src="sharma-logo.jpg">
+        <div class="sidebar-title">SHARMA COLLEGE</div>
+      </div>
+      <ul class="nav-menu">
+        <li class="nav-item active" onclick="switchTab('admin-dash', this)"><i data-lucide="activity" class="nav-icon"></i> Live Monitoring</li>
+        <li class="nav-item" onclick="switchTab('admin-students', this); loadAdminStudents();"><i data-lucide="users" class="nav-icon"></i> Student Manager</li>
+        <li class="nav-item" onclick="switchTab('admin-subjects', this); loadSubjects();"><i data-lucide="book-open" class="nav-icon"></i> Subjects & Timetable</li>
+        <li class="nav-item" onclick="switchTab('admin-attendance-report', this); loadAllAttendanceReport();"><i data-lucide="bar-chart-2" class="nav-icon"></i> Attendance Reports</li>
+        <li class="nav-item" onclick="switchTab('admin-forms', this); loadAdminForms()" id="adminFormsNavItem"><i data-lucide="inbox" class="nav-icon"></i> Form Applications <span id="adminFormsBadge" class="notif-badge" style="display:none;">0</span></li>
+        <li class="nav-item" onclick="switchTab('admin-events', this)"><i data-lucide="calendar-range" class="nav-icon"></i> Events Manager</li>
+        <li class="nav-item" onclick="switchTab('admin-results', this);"><i data-lucide="file-up" class="nav-icon"></i> Semester Result Upload</li>
+        <li class="nav-item" onclick="switchTab('tab-calendar', this); renderAcademicCalendar()"><i data-lucide="calendar-days" class="nav-icon"></i> Academic Calendar</li>
+        <div class="nav-bottom-group">
+          <li class="nav-item" onclick="openModal('settingsModal')"><i data-lucide="settings" class="nav-icon"></i> Settings</li>
+          <li class="nav-item" style="color: #ef4444;" onclick="logoutUser()"><i data-lucide="log-out" class="nav-icon"></i> Logout</li>
+        </div>
+      </ul>
+    </aside>
+
+    <div class="content-wrapper active" id="admin-dash">
+      <div class="top-bar">
+        <div style="display: flex; align-items: center; gap: 25px;">
+          <span style="cursor: pointer; font-size: 24px;" onclick="toggleSidebar()" title="Toggle Menu">☰</span>
+          <div class="search-container">
+            <i data-lucide="search" style="width:18px; color:var(--text-muted);"></i>
+            <input type="text" placeholder="Search for students, subjects, reports...">
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <button class="btn-action" style="width: auto; padding: 10px 22px; margin-top: 0; background: #000 !important;"
+            onclick="exportData()">Export CSV</button>
+          <div
+            style="width: 44px; height: 44px; border-radius: 12px; background: #fff; color: var(--text-main); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; box-shadow: var(--shadow-soft);"
+            onclick="openModal('profileModal')">🛡️</div>
+        </div>
+      </div>
+
+      <div class="grid-container">
+        <div class="card">
+          <h4 style="color: var(--text-muted); font-weight: 600; margin-bottom: 10px;">Present Today</h4>
+          <h2 id="adminPresentCount" style="color: var(--brand-green); font-size: 36px; font-weight:800;">00</h2>
+          <small id="adminTotalStrengthLabel" style="color: var(--text-muted);">0% of Total Strength</small>
+        </div>
+        <div class="card">
+          <h4 style="color: var(--text-muted); font-weight: 600; margin-bottom: 10px;">Late Arrivals</h4>
+          <h2 id="adminLateArrivalsCount" style="color: var(--brand-orange); font-size: 36px; font-weight:800;">00</h2>
+          <small style="color: var(--text-muted);">Flagged by AI System</small>
+        </div>
+
+
+
+        <div class="card span-2">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3>Live Attendance Log</h3>
+            <input type="text" placeholder="Search Student ID..."
+              style="width: 200px; padding: 8px; border: 1px solid var(--border); border-radius: 8px;">
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Photo</th>
+                <th>Student Name</th>
+                <th>Roll No.</th>
+                <th>Check-in Time</th>
+                <th>AI Confidence</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="adminAttendanceList">
+              <tr><td colspan="6" style="text-align:center;padding:20px;color:#64748b;">Loading attendance from Firebase...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card span-2" style="margin-top: 20px;">
+          <h3 style="margin-bottom: 5px;">Global Class Analytics</h3>
+          <p style="font-size: 12px; color: #64748b; margin-bottom: 15px;">Comparing Average Attendance & Grades Across
+            Departments</p>
+          <canvas id="adminClassChart" width="400" height="150"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Events Manager Tab -->
+    <div class="content-wrapper" id="admin-events">
+      <div class="top-bar">
+        <div style="display:flex; align-items:center; gap:15px;">
+          <span style="font-size:20px;">☰</span>
+          <div>
+            <h2 style="font-size:20px;">Events Manager</h2>
+            <span style="font-size:12px; color: #000;">● Post upcoming college events visible to students</span>
+          </div>
+        </div>
+      </div>
+      <div class="event-post-form">
+        <h4>📢 Post a New Event</h4>
+        <div class="form-row">
+          <div class="form-group"><label>Event Title</label><input type="text" id="evtTitle"
+              placeholder="e.g. Annual Tech Fest 2026" /></div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="evtCategory"
+              style="padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; font-family:Inter;">
+              <option value="cultural">🎭 Cultural</option>
+              <option value="technical">💻 Technical</option>
+              <option value="sports">🏆 Sports</option>
+              <option value="academic">📚 Academic</option>
+              <option value="workshop">🛠️ Workshop</option>
+              <option value="other">📌 Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Date</label><input type="date" id="evtDate" /></div>
+          <div class="form-group"><label>Time</label><input type="time" id="evtTime" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Venue</label><input type="text" id="evtVenue"
+              placeholder="e.g. College Auditorium" /></div>
+          <div class="form-group"><label>Organizer</label><input type="text" id="evtOrganizer"
+              placeholder="e.g. IT Department" /></div>
+        </div>
+        <div class="form-row single">
+          <div class="form-group"><label>Description</label><textarea id="evtDesc" placeholder="Describe the event..."
+              style="height:70px;"></textarea></div>
+        </div>
+        <button class="btn-action" style="width:auto; padding:11px 28px; margin-top:4px;" onclick="postAdminEvent()">📢
+          Publish Event</button>
+      </div>
+      <h3 style="margin-bottom:12px; border-left:4px solid var(--brand-green); padding-left:10px;">Published Events</h3>
+      <div id="adminEventsList"></div>
+    </div>
+
+    <!-- Admin Forms Inbox Tab -->
+    <div class="content-wrapper" id="admin-forms">
+      <div class="top-bar">
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <span style="cursor: pointer; font-size: 20px;">☰</span>
+          <div>
+            <h2 style="font-size: 20px;">Student Form Applications</h2>
+            <span style="font-size: 12px; color: #000;">● Review and respond to student-submitted forms</span>
+          </div>
+        </div>
+        <div class="form-filter-bar" style="margin-bottom:0;">
+          <select id="adminFormTypeFilter" onchange="loadAdminForms()">
+            <option value="all">All Form Types</option>
+            <option value="railway">Railway Concession</option>
+            <option value="fees">Fee Structure Request</option>
+            <option value="bonafide">Bonafide Certificate</option>
+            <option value="library">Library NOC</option>
+            <option value="scholarship">Scholarship Application</option>
+          </select>
+          <select id="adminFormStatusFilter" onchange="loadAdminForms()">
+            <option value="all">All Statuses</option>
+            <option value="Submitted">Submitted</option>
+            <option value="Under Review">Under Review</option>
+            <option value="Ready to Collect">Ready to Collect</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+      </div>
+      <div id="adminFormsList" style="margin-top: 10px;">
+        <div class="empty-state">
+          <div class="empty-icon"><i data-lucide="inbox" style="width: 48px; height: 48px; color: #94a3b8; opacity: 0.6; margin: 0 auto;"></i></div>
+          <p>No form applications found.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin: Student Manager Tab -->
+    <!-- FEE MODULE REMOVED -->
+    <div class="content-wrapper" id="admin-students">
+      <div class="top-bar">
+        <div style="display:flex;align-items:center;gap:15px;"><span onclick="toggleSidebar()" style="cursor:pointer;font-size:20px;">☰</span><div><h2 style="font-size:20px;">Student Manager</h2><span style="font-size:12px;color: #000;">● Add, edit or remove students</span></div></div>
+      </div>
+      <div class="card" style="margin-bottom:20px;">
+        <h3>Register New Student</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-top:15px;">
+          <div><label style="font-size:12px;font-weight:600;">First Name *</label><input id="adminStuFirst" type="text" placeholder="First Name" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-top:5px;font-family:Inter;"></div>
+          <div><label style="font-size:12px;font-weight:600;">Middle Name</label><input id="adminStuMid" type="text" placeholder="Middle Name" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-top:5px;font-family:Inter;"></div>
+          <div><label style="font-size:12px;font-weight:600;">Last Name *</label><input id="adminStuLast" type="text" placeholder="Last Name" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-top:5px;font-family:Inter;"></div>
+          <div><label style="font-size:12px;font-weight:600;">Roll No. *</label><input id="adminStuRoll" type="text" placeholder="Enter Roll Number" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-top:5px;font-family:Inter;"></div>
+          <div><label style="font-size:12px;font-weight:600;">Course</label><input id="adminStuCourse" type="text" placeholder="e.g. BCA / B.Tech" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-top:5px;font-family:Inter;"></div>
+          <div><label style="font-size:12px;font-weight:600;">Email *</label><input id="adminStuEmail" type="email" placeholder="student@sharmacollege.org" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-top:5px;font-family:Inter;"></div>
+        </div>
+        <button class="btn-action" onclick="addAdminStudent()" style="width:auto;padding:11px 28px;margin-top:15px;">Add Student</button>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+          <h3 style="border:none;padding:0;">Registered Students</h3>
+          <input type="text" id="adminStuSearch" placeholder="Search by name or roll..." onkeyup="filterAdminStudents()" style="padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-family:Inter;width:220px;">
+        </div>
+        <div id="adminStudentsList"><p style="color:#94a3b8;text-align:center;padding:20px;">Loading students...</p></div>
+      </div>
+    </div>
+
+    <!-- Admin: Subjects & Timetable Tab -->
+    <div class="content-wrapper" id="admin-subjects">
+      <div class="top-bar">
+        <div style="display:flex;align-items:center;gap:15px;"><span onclick="toggleSidebar()" style="cursor:pointer;font-size:20px;">☰</span><h2 style="font-size:20px;">Subjects &amp; Timetable</h2></div>
+      </div>
+      <div class="card" style="margin-bottom:20px;">
+        <h3>Add Subject</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:15px;margin-top:15px;">
+          <div><label style="font-size:12px;font-weight:600;">Subject Name *</label><input id="subjectName" type="text" placeholder="e.g. Advanced Java" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-top:5px;font-family:Inter;"></div>
+          <div><label style="font-size:12px;font-weight:600;">Course</label><input id="subjectCourse" type="text" placeholder="e.g. BCA" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-top:5px;font-family:Inter;"></div>
+          <div><label style="font-size:12px;font-weight:600;">Faculty Name</label><input id="subjectFaculty" type="text" placeholder="e.g. Prof. Sunita Rao" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-top:5px;font-family:Inter;"></div>
+          <div><label style="font-size:12px;font-weight:600;">Schedule</label><input id="subjectSchedule" type="text" placeholder="e.g. Mon 9:00-10:00" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-top:5px;font-family:Inter;"></div>
+        </div>
+        <button class="btn-action" onclick="saveSubject()" style="width:auto;padding:11px 28px;margin-top:15px;">Save Subject</button>
+      </div>
+      <div class="card"><h3>Subjects List</h3><div id="subjectList" style="margin-top:15px;"><p style="color:#94a3b8;text-align:center;padding:20px;">Loading subjects...</p></div></div>
+    </div>
+
+    <!-- Admin: Attendance Reports Tab -->
+    <div class="content-wrapper" id="admin-attendance-report">
+      <div class="top-bar">
+        <div style="display:flex;align-items:center;gap:15px;"><span onclick="toggleSidebar()" style="cursor:pointer;font-size:20px;">☰</span><div><h2 style="font-size:20px;">Attendance Reports</h2><span style="font-size:12px;color: #000;">● All student attendance from Firebase</span></div></div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <input type="text" id="attReportSearch" placeholder="Filter by Roll No..." oninput="filterAttReport()" style="padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-family:Inter;">
+          <button class="btn-action" style="width:auto;padding:8px 18px;margin-top:0;" onclick="loadAllAttendanceReport()">Refresh</button>
+        </div>
+      </div>
+      <div class="card">
+        <table><thead><tr><th>Student Name</th><th>Roll No.</th><th>Date</th><th>Subject</th><th>Verification</th><th>Status</th></tr></thead>
+          <tbody id="allAttendanceReportBody"><tr><td colspan="6" style="text-align:center;padding:20px;color:#94a3b8;">Loading records...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Admin: Semester Result Upload Tab (Professional Upgrade) -->
+    <div class="content-wrapper" id="admin-results">
+        <div class="top-bar">
+            <div style="display:flex;align-items:center;gap:15px;"><span onclick="toggleSidebar()" style="cursor:pointer;font-size:20px;">☰</span><h2 style="font-size:20px;">Result Management System</h2></div>
+        </div>
+        
+        <div style="display:grid; grid-template-columns: 1fr 2fr; gap:25px; margin-top:20px;">
+            <!-- Upload Card -->
+            <div class="card" style="height:fit-content; border-top:4px solid #000;">
+                <h3 style="margin-bottom:15px; display:flex; align-items:center; gap:10px;"><i data-lucide="file-spreadsheet" style="color:var(--brand-blue);"></i> Import Results</h3>
+                <p style="font-size:12px; color:#64748b; margin-bottom:20px; line-height:1.5;">
+                    Upload the university-formatted semester Excel sheet. The system will automatically map students by Roll No.
+                </p>
+                
+                <div style="padding:25px; border:2px dashed #e2e8f0; border-radius:12px; background:#f8fafc; text-align:center; transition:0.3s;" id="adminDropZone">
+                    <input type="file" id="adminResultExcel" accept=".xlsx, .xls" style="display:none;" onchange="updateFileNameDisplay()">
+                    <label for="adminResultExcel" style="cursor:pointer; display:block; width:100%;">
+                        <div id="fileUploadIcon" style="width:50px; height:50px; background:rgba(59,130,246,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px;">
+                            <i data-lucide="upload-cloud" style="width:24px; height:24px; color: #000;"></i>
+                        </div>
+                        <p id="fileNameDisplay" style="font-weight:700; color:#1e293b; font-size:14px;">Select University Sheet (.xlsx)</p>
+                        <p id="fileSubtext" style="font-size:11px; color:#64748b; margin-top:5px;">Standard Headers: Roll no, Seat No, DE, C, CE, ENG</p>
+                    </label>
+                </div>
+
+                <div id="adminExcelActions" style="display:none; margin-top:20px; flex-direction:column; gap:12px;">
+                    <button class="btn-action" id="adminUploadBtn" style="width:100%; height:52px; font-size:16px; font-weight:800; background-color:#000 !important; color:#ffffff !important; border:none; border-radius:10px; display:flex; align-items:center; justify-content:center; gap:12px; box-shadow:0 6px 20px rgba(59,130,246,0.35); transition:all 0.3s ease; cursor:pointer;" onclick="uploadAdminResult()">
+                        <i data-lucide="rocket" style="width:22px; height:22px;"></i>
+                        Publish to Student Dashboards
+                    </button>
+                    <button class="btn-action" style="width:100%; height:44px; background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; font-weight:700; font-size:14px; border-radius:8px;" onclick="document.getElementById('adminResultExcel').click()">Change Excel File</button>
+                </div>
+            </div>
+
+            <!-- Preview Card -->
+            <div class="card" style="border-top:4px solid #10b981;">
+                <h3 style="margin-bottom:15px; display:flex; align-items:center; gap:10px;"><i data-lucide="eye" style="color:#10b981;"></i> Data Preview</h3>
+                <div id="adminResultPreviewArea" style="min-height:300px; display:flex; align-items:center; justify-content:center; flex-direction:column; color:#94a3b8; border:1px solid #e2e8f0; border-radius:8px; background:#fafafa;">
+                    <i data-lucide="database" style="width:48px; height:48px; opacity:0.3; margin-bottom:10px;"></i>
+                    <p style="font-size:13px;">No file selected. Please upload an Excel sheet to preview data.</p>
+                </div>
+                <div id="parseResultsSummary" style="display:none; margin-top:15px; padding:15px; background:rgba(16,185,129,0.1); border-radius:8px; border:1px solid rgba(16,185,129,0.2);">
+                    <p id="parseMessage" style="font-size:13px; color:#065f46; font-weight:600;"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+  </section>
+
+
+  <section id="collegeDashboard" style="display:none;">
+    <aside class="sidebar">
+      <div class="logo-area">
+        <img src="sharma-logo.jpg">
+        <div class="sidebar-title">SHARMA ERP</div>
+      </div>
+      <ul class="nav-menu">
+        <li class="nav-item active" onclick="switchTab('fac-dash', this)"><i data-lucide="trending-up" class="nav-icon"></i> Teaching Analytics</li>
+        <li class="nav-item" onclick="switchTab('fac-students', this)"><i data-lucide="users" class="nav-icon"></i> Student Tracking</li>
+
+        <li class="nav-item" onclick="switchTab('fac-class-data', this); loadFacultyClassData();"><i data-lucide="table" class="nav-icon"></i> Class Data</li>
+        <li class="nav-item" onclick="switchTab('fac-doubts', this); loadFacultyDoubts()"><i data-lucide="message-circle" class="nav-icon"></i> Doubts Inbox <span id="facDoubtsCount" class="notif-badge" style="display:none;"></span></li>
+        <li class="nav-item" onclick="switchTab('fac-calendar', this); renderAcademicCalendar()"><i data-lucide="calendar-days" class="nav-icon"></i> Academic Calendar</li>
+        <div class="nav-bottom-group">
+          <li class="nav-item" onclick="openModal('settingsModal')"><i data-lucide="settings" class="nav-icon"></i> Settings</li>
+          <li class="nav-item" onclick="openModal('profileModal')"><i data-lucide="user" class="nav-icon"></i> My Profile</li>
+          <li class="nav-item" style="color: #ef4444;" onclick="logoutUser()"><i data-lucide="log-out" class="nav-icon"></i> Logout</li>
+        </div>
+      </ul>
+    </aside>
+
+    <div class="content-wrapper active" id="fac-dash">
+      <div class="top-bar">
+        <div style="display: flex; align-items: center; gap: 25px;">
+          <span style="cursor: pointer; font-size: 24px;" onclick="toggleSidebar()" title="Toggle Menu">☰</span>
+          <div class="search-container">
+            <i data-lucide="search" style="width:18px; color:var(--text-muted);"></i>
+            <input type="text" placeholder="Search students, marks, schedules...">
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <div style="text-align: right;">
+            <strong id="facTopName" style="font-weight:700;">Faculty</strong><br>
+            <span id="facTopDept" style="font-size: 12px; color:var(--text-muted);">Department</span>
+          </div>
+          <div style="width:44px; height:44px; border-radius:12px; background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; box-shadow:var(--shadow-soft);" onclick="openModal('profileModal')">👩‍🏫</div>
+        </div>
+      </div>
+      <div class="grid-container">
+        <div class="card">
+          <h3 id="facGreeting" style="margin-bottom:15px;">Teaching Output</h3>
+          <div class="fac-chart-container" style="height:180px;">
+            <canvas id="teachingChart"></canvas>
+          </div>
+          <p style="text-align: center; margin-top: 15px; font-weight: 700; color: var(--brand-purple);">84% Syllabus Delivery</p>
+        </div>
+        <div class="card span-2">
+          <h3>Critical Student Alerts (Fails/KT)</h3>
+          <table>
+            <thead><tr><th>Student Name</th><th>Subject</th><th>Score</th><th>Action</th></tr></thead>
+            <tbody id="criticalStudentAlerts">
+              <tr><td colspan="4" style="text-align:center;padding:20px;color:#64748b;">No defaulters currently flagged.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Faculty Doubts Inbox Tab (PROPER LEVEL - sibling to fac-dash) -->
+    <div class="content-wrapper" id="fac-doubts">
+      <div class="top-bar">
+        <div style="display:flex; align-items:center; gap:15px;">
+          <span style="cursor:pointer; font-size:20px;" onclick="toggleSidebar()">☰</span>
+          <div>
+            <h2 style="font-size:20px;">Anonymous Student Doubts Inbox</h2>
+            <span style="font-size:12px; color:var(--brand-green);">● Live Firebase updates — Reply to student queries below</span>
+          </div>
+        </div>
+      </div>
+      <div id="doubtList" style="display:flex; flex-direction:column; gap:15px;">
+        <p style="color:#64748b; font-size:14px;">No new doubts received.</p>
+      </div>
+    </div>
+
+    <!-- Student Tracking Tab -->
+    <div class="content-wrapper" id="fac-students">
+      <div class="top-bar">
+        <div style="display:flex; align-items:center; gap:15px;">
+          <span style="cursor:pointer; font-size:20px;" onclick="toggleSidebar()">☰</span>
+          <h2 style="font-size:20px;">Student Tracking</h2>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Registered Students</h3>
+        <p style="color:#64748b; font-size:13px; margin-bottom:18px;">Live view of all enrolled students from Firebase.</p>
+        <div id="facStudentsList"><p style="color:#94a3b8;">Loading...</p></div>
+      </div>
+    </div>
+
+    <!-- Faculty Calendar Tab -->
+    <div class="content-wrapper" id="fac-calendar">
+      <div class="top-bar">
+        <div style="display:flex; align-items:center; gap:15px;">
+          <span style="cursor:pointer; font-size:20px;" onclick="toggleSidebar()">☰</span>
+          <div>
+            <h2 style="font-size:20px;">Academic Calendar</h2>
+            <span style="font-size:12px; color:var(--brand-green);">● Synced with Admin-posted college events</span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button onclick="changeCalendarMonth(-1)" style="background:var(--sidebar-dark); color:white; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:16px;">❮</button>
+          <span id="calendarMonthTitleFac" style="font-size:14px; font-weight:700; color:#1e293b; min-width:140px; text-align:center;">Month Year</span>
+          <button onclick="changeCalendarMonth(1)" style="background:var(--sidebar-dark); color:white; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:16px;">❯</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0; overflow:hidden; margin-bottom:20px;">
+        <div style="display:grid; grid-template-columns:repeat(7,1fr); background:#f8fafc; border-bottom:1px solid var(--border);">
+          <div class="calendar-day-header">Sun</div><div class="calendar-day-header">Mon</div><div class="calendar-day-header">Tue</div><div class="calendar-day-header">Wed</div><div class="calendar-day-header">Thu</div><div class="calendar-day-header">Fri</div><div class="calendar-day-header">Sat</div>
+        </div>
+        <div id="calendarGridFull" class="calendar-grid"></div>
+      </div>
+      </div>
+      <div id="holidayListFull" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px;"></div>
+    </div>
+
+
+
+<!-- Faculty: Upload Results Tab DELETED (Admin Only) -->
+
+    <!-- Faculty: Class Data Tab -->
+    <div class="content-wrapper" id="fac-class-data">
+      <div class="top-bar">
+        <div style="display:flex;align-items:center;gap:15px;"><span onclick="toggleSidebar()" style="cursor:pointer;font-size:20px;">☰</span><h2 style="font-size:20px;">Class Data &amp; Analytics</h2></div>
+        <button class="btn-action" style="width:auto;padding:8px 18px;margin-top:0;" onclick="loadFacultyClassData()">🔄 Refresh</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Student Name</th><th>Roll No.</th><th>Overall Attendance %</th><th>Status</th></tr></thead>
+          <tbody id="facClassDataBody"><tr><td colspan="4" style="text-align:center;padding:20px;color:#94a3b8;">Loading class data...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+
+  <section id="mainDashboard" style="display:none;">
+    <aside class="sidebar">
+      <div class="logo-area" style="border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 20px;">
+        <img src="sharma-logo.jpg" style="width: 40px; margin-bottom: 8px;">
+        <div class="sidebar-title">SHARMA ERP</div>
+        
+        <!-- DETAILED PROFILE HEADER (IMAGE-INSPIRED) -->
+        <div style="margin-top: 15px; display: flex; align-items: center; gap: 12px;">
+          <div style="width: 34px; height: 34px; border-radius: 50%; overflow: hidden; border: 1.5px solid var(--brand-green);">
+            <img id="sidebarStudentPhoto" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" style="width: 100%; height: 100%; object-fit: cover;">
+          </div>
+          <div style="overflow: hidden;">
+            <p id="sidebarStudentSession" style="font-size: 10px; font-weight: 600; color: white; opacity: 0.85; margin: 0;">Session: 2025-2026</p>
+            <p id="sidebarStudentSection" style="font-size: 9px; font-weight: 700; color: var(--brand-green); text-transform: uppercase; margin: 0;">SECTION: A</p>
+          </div>
+        </div>
+      </div>
+      <ul class="nav-menu">
+        <li class="nav-item active" onclick="switchTab('tab-dash', this)"><i data-lucide="home" class="nav-icon"></i> Dashboard</li>
+        <li class="nav-item" onclick="switchTab('tab-attendance', this)"><i data-lucide="calendar-check" class="nav-icon"></i> Attendance</li>
+        <li class="nav-item" onclick="switchTab('tab-timetable', this)"><i data-lucide="calendar-clock" class="nav-icon"></i> Class Timetable</li>
+        <li class="nav-item" onclick="switchTab('tab-results', this)"><i data-lucide="bar-chart-2" class="nav-icon"></i> Semester Results</li>
+        <li class="nav-item" onclick="switchTab('tab-doubts', this)"><i data-lucide="help-circle" class="nav-icon"></i> Ask a Doubt</li>
+        <li class="nav-item" onclick="switchTab('tab-forms', this); loadMyApplications()"><i data-lucide="file-text" class="nav-icon"></i> Apply Forms</li>
+        <li class="nav-item" onclick="switchTab('tab-events', this)"><i data-lucide="sparkles" class="nav-icon"></i> College Events</li>
+        <li class="nav-item" onclick="openModal('notificationsModal'); markNotifsRead()" id="studentNotifNavItem"><i data-lucide="bell" class="nav-icon"></i> Notifications <span id="notifBadge" class="notif-badge" style="display:none;">0</span></li>
+        <div class="nav-bottom-group">
+          <li class="nav-item" onclick="openModal('settingsModal')"><i data-lucide="settings" class="nav-icon"></i> Settings</li>
+          <li class="nav-item" onclick="openModal('profileModal')"><i data-lucide="user" class="nav-icon"></i> My Profile</li>
+          <li class="nav-item" style="color: #ef4444;" onclick="logoutUser()"><i data-lucide="log-out" class="nav-icon"></i> Logout</li>
+        </div>
+      </ul>
+    </aside>
+
+    <div class="content-wrapper active" id="tab-dash">
+      <div class="top-bar">
+        <div style="display: flex; align-items: center; gap: 25px;">
+          <span style="cursor: pointer; font-size: 24px;" onclick="toggleSidebar()" title="Toggle Menu">☰</span>
+          <div class="search-container">
+            <i data-lucide="search" style="width:18px; color:var(--text-muted);"></i>
+            <input type="text" placeholder="Search attendance, results, events...">
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <div style="text-align: right;">
+            <strong id="topStudentName" style="font-weight:700;">Student Profile</strong><br>
+            <span id="topStudentCourse" style="font-size: 12px; color: var(--text-muted);">Course Details</span>
+          </div>
+          <div
+            style="width: 44px; height: 44px; border-radius: 12px; background: #fff; border: none; box-shadow: var(--shadow-soft); overflow: hidden; cursor: pointer;"
+            onclick="openModal('profileModal')">
+            <img id="topStudentPhoto" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" style="width: 100%; height: 100%; object-fit: cover;">
+          </div>
+        </div>
+      </div>
+ 
+      <div class="grid-container">
+        <!-- Attendance Pie Chart Card -->
+        <div class="card">
+          <h3>Attendance Overview</h3>
+          <div class="att-chart-wrap">
+            <div class="att-chart-canvas-wrap">
+              <canvas id="attendancePieChart" width="200" height="200"></canvas>
+            </div>
+            <div class="att-legend">
+              <div class="att-legend-row">
+                <div class="att-legend-left">
+                  <div class="legend-dot" style="background: #000;"></div>Present Days
+                </div>
+                <div class="att-legend-right" style="color: #000;">18 days</div>
+              </div>
+              <div class="att-legend-row">
+                <div class="att-legend-left">
+                  <div class="legend-dot" style="background:#ef4444;"></div>Absent Days
+                </div>
+                <div class="att-legend-right" style="color:#ef4444;">3 days</div>
+              </div>
+              <div class="att-legend-row">
+                <div class="att-legend-left">
+                  <div class="legend-dot" style="background:#d1d5db;"></div>College Holidays
+                </div>
+                <div class="att-legend-right" style="color:#94a3b8;">5 days</div>
+              </div>
+            </div>
+          </div>
+          <button class="btn-action" onclick="startAttendanceScan()" style="margin-top:14px;">Mark Self
+            Attendance</button>
+        </div>
+
+
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Upcoming Events mini card -->
+        <div class="card span-1" id="dashEventsMini">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <h3 style="border:none; padding:0; margin:0;">🎉 Upcoming Events</h3>
+            <span style="font-size:12px; color:var(--brand-green); cursor:pointer; font-weight:600;"
+              onclick="switchTab('tab-events', null)">View All →</span>
+          </div>
+          <div id="dashEventsPreview">
+            <p style="color:#94a3b8; font-size:12px;">Loading events...</p>
+          </div>
+        </div>
+
+        <!-- NEW INTEGRATED CALENDAR CARD -->
+        <div class="card span-2" id="dashCalendarCard">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <h3 style="border:none; padding:0; margin:0;">📅 Academic Calendar</h3>
+            <div style="display:flex; align-items:center; gap:8px;">
+               <span id="calendarMonthTitle" style="font-size:13px; font-weight:700; color:#1e293b;">March 2026</span>
+               <div style="display:flex; gap:4px;">
+                  <button class="nav-btn-small" onclick="changeCalendarMonth(-1)">←</button>
+                  <button class="nav-btn-small" onclick="changeCalendarMonth(1)">→</button>
+               </div>
+            </div>
+          </div>
+          <div id="calendarGrid" class="mini-calendar-grid">
+             <!-- Populated by JS -->
+          </div>
+          <div id="holidayList" style="margin-top:10px; display:flex; gap:8px; overflow-x:auto; padding-bottom:5px;">
+             <!-- Mini holiday tags -->
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="content-wrapper" id="tab-doubts">
+      <div class="card" style="margin-bottom: 20px;">
+        <h3>Ask an Anonymous Doubt</h3>
+        <p style="font-size: 12px; color: #64748b; margin-bottom: 15px;">Your identity is protected. Abusive or
+          irrelevant messages are automatically blocked by AI.</p>
+        <select id="doubtSubject"
+          style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid var(--border);">
+          <option value="" disabled selected>Loading Professors...</option>
+        </select>
+        <textarea id="doubtText" placeholder="Describe your doubt here..."
+          style="width:100%; height:100px; padding:10px; border-radius:8px; border:1px solid var(--border); margin-bottom:5px; resize:none;"></textarea>
+        <p id="aiWarningMsg" style="color:#ef4444; font-size:12px; display:none; margin-bottom:10px;">⚠️ AI Alert:
+          Message flagged as non-educational or inappropriate.</p>
+        <p id="successMsg" style="color:var(--brand-green); font-size:12px; display:none; margin-bottom:10px;">✅ Message
+          sent securely and anonymously.</p>
+        <button class="btn-action" id="doubtSubmitBtn" onclick="submitDoubt()">Send to Professor</button>
+      </div>
+
+      <div class="card">
+        <h3>My Conversation History</h3>
+        <div id="studentDoubtHistory" style="display:flex; flex-direction:column; gap:15px; margin-top:15px;">
+          <p style="color: #64748b; font-size: 13px;">You have no active queries.</p>
+        </div>
+      </div>
+    </div>
+    <div class="content-wrapper" id="tab-attendance">
+      <div class="card">
+        <h3>Self Attendance History</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Subject</th>
+              <th>Verification</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="studentAttendanceBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STUDENT CLASS TIMETABLE TAB -->
+    <div class="content-wrapper" id="tab-timetable">
+      <div class="top-bar">
+        <div style="display:flex; align-items:center; gap:15px;">
+           <span onclick="toggleSidebar()" style="cursor:pointer; font-size:20px;">☰</span>
+           <div>
+             <h2 style="font-size:20px;">Class Academic Timetable</h2>
+             <span id="studentTimetableCourse" style="font-size:12px; color:var(--brand-green);">● Loading course-specific schedule...</span>
+           </div>
+        </div>
+      </div>
+      
+      <div id="studentTimetableGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:20px; margin-top:10px;">
+          <!-- Subject cards will be injected here -->
+          <div class="card"><p style="text-align:center; color:#64748b; padding:20px;">No subjects scheduled for your course yet.</p></div>
+      </div>
+    </div>
+
+    <div class="content-wrapper" id="tab-results">
+      <!-- The results tab is now fully dynamic and managed by setupStudentResultsListener -->
+      <div id="studentResultsContainer">
+          <div class="card"><p style="text-align:center; color:#64748b; padding:40px;">Initializing Academic Database...</p></div>
+      </div>
+    </div>
+
+    <!-- FEE MODULE TAB (fully redesigned) -->
+    <div class="content-wrapper" id="tab-fees">
+      <div id="feeDeadlineBanner" style="display:none;"></div>
+
+      <div class="fee-summary-grid">
+        <div class="fee-stat-card">
+          <div class="fsc-icon">💰</div>
+          <div class="fsc-value" id="feeTotalAmt">₹25,000</div>
+          <div class="fsc-label">Total Fee</div>
+        </div>
+        <div class="fee-stat-card">
+          <div class="fsc-icon">✅</div>
+          <div class="fsc-value" style="color:var(--brand-green);" id="feePaidAmt">₹12,500</div>
+          <div class="fsc-label">Paid</div>
+        </div>
+        <div class="fee-stat-card">
+          <div class="fsc-icon">⏳</div>
+          <div class="fsc-value" style="color:#ef4444;" id="feeRemainingAmt">₹12,500</div>
+          <div class="fsc-label">Remaining</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Fee Breakdown</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Paid On</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Tuition Fee</td>
+              <td>₹10,000</td>
+              <td><span class="status-pill status-ok">PAID</span></td>
+              <td>12 Jan 2026</td>
+            </tr>
+            <tr>
+              <td>Lab Fee</td>
+              <td>₹2,500</td>
+              <td><span class="status-pill status-ok">PAID</span></td>
+              <td>12 Jan 2026</td>
+            </tr>
+            <tr>
+              <td>Library Fee</td>
+              <td>₹1,500</td>
+              <td><span class="status-pill status-kt">PENDING</span></td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Exam Fee</td>
+              <td>₹4,000</td>
+              <td><span class="status-pill status-kt">PENDING</span></td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Development Fee</td>
+              <td>₹7,000</td>
+              <td><span class="status-pill status-kt">PENDING</span></td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="btn-action" style="width:auto; padding:12px 32px; margin-top:20px;" onclick="openQRPayModal()">💳
+          Pay Now (UPI / QR Scanner)</button>
+      </div>
+    </div>
+
+    <!-- EVENTS TAB -->
+    <div class="content-wrapper" id="tab-events">
+      <div class="top-bar">
+        <div style="display:flex; align-items:center; gap:15px;">
+          <span style="font-size:20px;">☰</span>
+          <div>
+            <h2 style="font-size:20px;">College Events</h2>
+            <span style="font-size:12px; color:var(--brand-green);">● Stay updated with campus activities</span>
+          </div>
+        </div>
+      </div>
+      <div id="studentEventsList">
+        <p style="color:#94a3b8; padding:20px;">Loading events...</p>
+      </div>
+    </div>
+
+    <!-- ===== STUDENT FORMS TAB ===== -->
+    <div class="content-wrapper" id="tab-forms">
+      <div class="top-bar">
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <span style="cursor: pointer; font-size: 20px;">☰</span>
+          <div>
+            <h2 style="font-size: 20px;">Apply for Forms</h2>
+            <span style="font-size: 12px; color: var(--brand-green);">● Apply for certificates, concessions &
+              more</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inner tabs: Apply / My Applications -->
+      <div class="inner-tab-bar">
+        <div class="inner-tab active" id="innerApply" onclick="showInnerTab('apply')">➕ Apply New Form</div>
+        <div class="inner-tab" id="innerMyApps" onclick="showInnerTab('myapps')">📁 My Applications</div>
+      </div>
+
+      <!-- APPLY SECTION -->
+      <div id="formsApplySection">
+        <div class="card" style="margin-bottom: 20px;">
+          <h3>Select Form Type</h3>
+          <div class="form-type-grid">
+            <div class="form-type-card" id="ftype-railway" onclick="selectFormType('railway')">
+              <i data-lucide="train-front" class="form-icon" style="margin: 0 auto 8px; width: 28px; height: 28px; color: #475569;"></i>
+              Railway Concession
+            </div>
+            <div class="form-type-card" id="ftype-fees" onclick="selectFormType('fees')">
+              <i data-lucide="indian-rupee" class="form-icon" style="margin: 0 auto 8px; width: 28px; height: 28px; color: #475569;"></i>
+              Fee Structure Request
+            </div>
+            <div class="form-type-card" id="ftype-bonafide" onclick="selectFormType('bonafide')">
+              <i data-lucide="file-check-2" class="form-icon" style="margin: 0 auto 8px; width: 28px; height: 28px; color: #475569;"></i>
+              Bonafide Certificate
+            </div>
+            <div class="form-type-card" id="ftype-library" onclick="selectFormType('library')">
+              <i data-lucide="book-open-check" class="form-icon" style="margin: 0 auto 8px; width: 28px; height: 28px; color: #475569;"></i>
+              Library NOC
+            </div>
+            <div class="form-type-card" id="ftype-scholarship" onclick="selectFormType('scholarship')">
+              <i data-lucide="graduation-cap" class="form-icon" style="margin: 0 auto 8px; width: 28px; height: 28px; color: #475569;"></i>
+              Scholarship Application
+            </div>
+          </div>
+
+          <!-- Dynamic form area -->
+          <div id="dynamicFormArea" style="display:none;"></div>
+
+          <button class="btn-action" id="submitFormBtn"
+            style="display:none; width:auto; padding:12px 32px; margin-top:0;" onclick="submitApplicationForm()">
+            📤 Submit Application
+          </button>
+        </div>
+      </div>
+
+      <!-- MY APPLICATIONS SECTION -->
+      <div id="formsMyAppsSection" style="display:none;">
+        <div class="card">
+        <h3>My Application History</h3>
+          <p style="font-size:13px; color:#64748b; margin-bottom:18px;">Track the status of your submitted forms here.
+          </p>
+          <div id="myApplicationsList">
+            <div class="empty-state">
+              <div class="empty-icon"><i data-lucide="inbox" style="width: 48px; height: 48px; color: #94a3b8; opacity: 0.6; margin: 0 auto;"></i></div>
+              <p>You have not submitted any forms yet.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="content-wrapper" id="tab-calendar">
+    <div class="top-bar">
+      <div style="display:flex; align-items:center; gap:25px;">
+        <span onclick="toggleSidebar()" style="cursor:pointer; font-size:24px;">☰</span>
+        <div class="search-container">
+          <i data-lucide="search" style="width:18px; color:var(--text-muted);"></i>
+          <input type="text" placeholder="Search holidays, events, schedules...">
+        </div>
+      </div>
+    </div>
+      
+      <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 25px;">
+        <div class="calendar-header" style="background: var(--sidebar-dark); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+          <button onclick="changeCalendarMonth(-1)" style="background:transparent; color:white; border:none; cursor:pointer; font-size:20px;">❮</button>
+          <h3 id="calendarMonthTitle" style="border:none; padding:0; margin:0; color:white; font-size: 18px;">Month Year</h3>
+          <button onclick="changeCalendarMonth(1)" style="background:transparent; color:white; border:none; cursor:pointer; font-size:20px;">❯</button>
+        </div>
+        <div class="calendar-grid-header" style="display: grid; grid-template-columns: repeat(7, 1fr); background: #f8fafc; border-bottom: 1px solid var(--border);">
+            <div class="calendar-day-header">Sun</div>
+            <div class="calendar-day-header">Mon</div>
+            <div class="calendar-day-header">Tue</div>
+            <div class="calendar-day-header">Wed</div>
+            <div class="calendar-day-header">Thu</div>
+            <div class="calendar-day-header">Fri</div>
+            <div class="calendar-day-header">Sat</div>
+        </div>
+        <div id="calendarGrid" class="calendar-grid">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <div class="grid-container">
+        <!-- ADMIN ONLY EVENT MANAGER FORM (DASHBOARD-SPECIFIC HUD) -->
+        <div class="card" id="adminCalendarManager" style="grid-column: span 3; display: none; background: #fdf2f8; border-left: 5px solid #db2777;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="border:none; padding:0; margin:0; color:#db2777;">📢 Manage College Calendar (Admin)</h3>
+                <span style="font-size:12px; color:#9d174d;">Post updates visible to all roles</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div class="form-group">
+                    <label>Event Name</label>
+                    <input type="text" id="calEvtTitle" placeholder="e.g. Annual Fest 2026" />
+                </div>
+                <div class="form-group">
+                    <label>Event Date</label>
+                    <input type="date" id="calEvtDate" />
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="calEvtType">
+                        <option value="holiday">🔴 Holiday (Red)</option>
+                        <option value="function">🟣 Function (Purple)</option>
+                        <option value="exam">🟢 Exam / Test (Green)</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-action" onclick="saveCalendarEvent()" style="margin-top:15px; background: #db2777; width: auto; padding: 10px 25px;">📅 Publish to All Calendars</button>
+        </div>
+
+        <div class="card" style="grid-column: span 3;">
+          <h3 style="margin-bottom: 15px;">Upcoming Government Holidays</h3>
+          <div id="holidayList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+  <div id="cameraModal"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
+    <div class="card" style="width: 500px; text-align: center;">
+      <h3>AI Face Verification</h3>
+      <p id="aiStatus" style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Initializing AI Models...</p>
+      <div style="position: relative; margin: 20px auto; width: 440px; height: 330px;">
+        <video id="video" width="440" height="330" autoplay muted
+          style="border-radius: 15px; background: #000; border: 3px solid var(--brand-green);"></video>
+        <canvas id="overlay" style="position: absolute; top: 0; left: 0;"></canvas>
+      </div>
+      <button class="btn-action" onclick="stopCamera()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- QR/UPI Payment Modal -->
+  <div id="payModal"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(8px); padding:20px;">
+    <div style="width:100%; max-width:460px;">
+
+      <!-- Step 1: QR Scanner Screen -->
+      <div id="payStep1" class="qr-payment-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Sharma College
+            ERP</span>
+          <span style="cursor:pointer; color:#94a3b8; font-size:18px;" onclick="closeQRPayModal()">✕</span>
+        </div>
+        <div class="amount-display" id="qrAmountDisplay">₹12,500</div>
+        <div class="amount-label">Due Amount — Scan to Pay</div>
+
+        <div class="payment-method-tabs">
+          <button class="pay-method-btn active" id="tabQR" onclick="switchPayTab('qr')">📷 QR Code</button>
+          <button class="pay-method-btn" id="tabUPI" onclick="switchPayTab('upi')">📱 UPI ID</button>
+          <button class="pay-method-btn" id="tabRef" onclick="switchPayTab('ref')">🧾 Reference</button>
+        </div>
+
+        <!-- QR view -->
+        <div id="payViewQR">
+          <div class="upi-recipient-row">
+            <div class="upi-avatar">S</div>
+            <span>Sharma College Finance Dept</span>
+          </div>
+          <div class="qr-frame">
+            <img src="sharma-logo.jpg" alt="QR Code"
+              style="width:200px; height:200px; object-fit:contain; filter:contrast(2) invert(1);" />
+          </div>
+          <div class="upi-id-badge">UPI: sharmacollege@sbi</div>
+          <p style="font-size:12px; color:#64748b; margin-bottom:16px;">Scan with any UPI app (Google Pay, PhonePe,
+            Paytm, BHIM)</p>
+        </div>
+
+        <!-- UPI ID entry -->
+        <div id="payViewUPI" class="upi-input-section">
+          <label>Your UPI ID</label>
+          <input type="text" id="upiIdInput" placeholder="e.g. name@paytm" />
+          <label>Confirm Amount</label>
+          <input type="text" id="upiAmtInput" value="12500" readonly style="color:#fbbf24;" />
+        </div>
+
+        <!-- Reference no entry -->
+        <div id="payViewRef" class="upi-input-section">
+          <label>Bank Transaction / Reference Number</label>
+          <input type="text" id="refNoInput" placeholder="Enter 12-digit reference number" />
+          <label>Payment Date</label>
+          <input type="date" id="refDateInput" />
+        </div>
+
+        <!-- Countdown timer -->
+        <div class="countdown-ring-wrap">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle class="countdown-ring-bg" cx="40" cy="40" r="36" />
+            <circle class="countdown-ring-fg" id="countdownRingFg" cx="40" cy="40" r="36" />
+          </svg>
+          <div class="ring-text">
+            <div>
+              <div id="countdownNum">3:00</div>
+              <div class="ring-label">EXPIRES</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-pay-now" id="payConfirmBtn" onclick="processQRPayment()">✅ I Have Paid / Confirm
+          Payment</button>
+        <button
+          style="width:100%; padding:10px; background:transparent; border:none; cursor:pointer; color:#64748b; font-size:13px; margin-top:8px;"
+          onclick="closeQRPayModal()">Cancel</button>
+      </div>
+
+      <!-- Step 2: Processing -->
+      <div id="payStep2" style="display:none;" class="qr-payment-box">
+        <div style="padding:40px 20px; text-align:center;">
+          <div style="font-size:48px; margin-bottom:20px; animation: spin 1s linear infinite;">⏳</div>
+          <h3 style="font-size:20px; color:#fbbf24; margin-bottom:8px;">Processing Payment...</h3>
+          <p style="color:#94a3b8; font-size:14px;">Please wait while we verify your transaction.</p>
+        </div>
+      </div>
+
+      <!-- Step 3a: Success -->
+      <div id="payStep3success" style="display:none;" class="qr-payment-box">
+        <div class="txn-result txn-success">
+          <div class="txn-icon-wrap">✅</div>
+          <h3>Payment Successful!</h3>
+          <p>Your fee payment has been received and recorded.</p>
+          <div class="txn-id-badge" id="txnIdDisplay">TXN ID: ...</div>
+          <div style="font-size:13px; color:#64748b; margin-bottom:20px;">Updated Balance: <strong
+              style="color:#059669;" id="newBalDisplay">₹0</strong></div>
+          <button class="btn-pay-now" onclick="closeQRPayModal()">🏠 Back to Dashboard</button>
+        </div>
+      </div>
+
+      <!-- Step 3b: Failed -->
+      <div id="payStep3fail" style="display:none;" class="qr-payment-box">
+        <div class="txn-result txn-fail">
+          <div class="txn-icon-wrap">❌</div>
+          <h3>Transaction Failed</h3>
+          <p id="txnFailReason">Payment could not be verified. Please try again or contact admin.</p>
+          <button class="btn-pay-now" style="background:linear-gradient(135deg,#ef4444,#dc2626);"
+            onclick="switchPayStep('step1')">🔄 Try Again</button>
+          <button
+            style="width:100%; padding:10px; background:transparent; border:none; cursor:pointer; color:#94a3b8; font-size:13px; margin-top:8px;"
+            onclick="closeQRPayModal()">Cancel</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <div id="settingsModal"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
+    <div class="card" style="width: 400px; text-align: left;">
+      <h3 style="margin-bottom: 20px; display: flex; justify-content: space-between;">⚙️ System Settings <span
+          style="cursor:pointer;" onclick="closeModal('settingsModal')">✕</span></h3>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center;">
+        <span>Dark Theme Interface</span>
+        <input type="checkbox" style="width: 20px; height: 20px;">
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center;">
+        <span>Email Notifications</span>
+        <input type="checkbox" checked style="width: 20px; height: 20px;">
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center;">
+        <span>Two-Factor Auth</span>
+        <input type="checkbox" checked style="width: 20px; height: 20px;">
+      </div>
+      <button class="btn-action" onclick="closeModal('settingsModal')">Save Preferences</button>
+    </div>
+  </div>
+
+  <div id="profileModal"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
+    <div class="card" style="width: 400px; text-align: center; padding: 25px;">
+      <div id="profileImageWrap" style="width: 100px; height: 100px; background: #e2e8f0; border-radius: 50%; margin: 0 auto 15px; overflow: hidden; border: 3px solid #000; display: flex; align-items: center; justify-content: center;">
+        <img id="profileImageLarge" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" style="width:100%; height:100%; object-fit:cover;">
+      </div>
+      
+      <h3 id="profileName" style="font-size: 24px; color: #1e293b; margin-bottom: 4px;">Loading Student...</h3>
+
+      <p style="color: #64748b; font-size: 14px; margin-bottom: 20px; cursor: pointer;" id="profileRole" onclick="const rn = this.innerText.split('|')[1]?.trim(); if(rn) copyToClipboard(rn)" data-tooltip="Click to copy Roll No.">Student | Roll No | Course</p>
+
+      <div id="profileDetailCard" style="text-align: left; margin-bottom: 20px; padding: 18px; background: #f8fafc; border-radius: 14px; border: 1px solid #e2e8f0; font-size: 14px;">
+        <p style="margin-bottom: 10px; color: #334155;"><strong>Email:</strong> <span id="profileEmailVal">...</span></p>
+        <p style="margin-bottom: 10px; color: #334155;"><strong>Security:</strong> <span id="profileSecurityVal">biometric_enabled</span></p>
+        <p style="color: #334155;"><strong>Joined:</strong> <span id="profileJoinedVal">...</span></p>
+      </div>
+
+      <!-- Compulsory Photo Upload (Hidden once uploaded) -->
+      <div id="profileUploadArea" style="margin-bottom: 20px;">
+        <p style="font-size: 11px; color: #ef4444; font-weight: 700; text-transform: uppercase; margin-bottom: 10px;">⚠️ Profile photo is compulsory for AI attendance</p>
+        <input type="file" id="profileFile" accept="image/*" style="display:none;" onchange="handleProfileFileChange(this)">
+        <button class="btn-action" style="background: #000; margin-top:0;" onclick="document.getElementById('profileFile').click()" id="profileUploadTrigger">📷 Choose Photo</button>
+        <button class="btn-action" style="background:#10b981; margin-top:8px; display:none;" id="profileSaveBtn" onclick="uploadProfilePicture()">💾 Save & Register Face</button>
+      </div>
+
+      <button class="btn-action" style="background:#64748b; font-weight: 600;" onclick="closeModal('profileModal')">Close Profile</button>
+    </div>
+  </div>
+
+  <div id="notificationsModal"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
+    <div class="card" style="width: 480px; text-align: left; max-height:85vh; overflow-y:auto;">
+      <h3 style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items:center;">
+        <span style="display:flex; align-items:center; gap:10px;">🔔 Notifications</span>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <span style="font-size:11px; color:var(--brand-green); cursor:pointer; font-weight:700;" onclick="markNotifsRead()">Mark All Read</span>
+          <span style="cursor:pointer; color:#94a3b8; font-size:18px;" onclick="closeModal('notificationsModal')">✕</span>
+        </div>
+      </h3>
+
+      <div id="notifList">
+        <p style="padding:15px; color:#64748b; text-align:center;">Loading notifications...</p>
+      </div>
+
+      <!-- Dynamic form notifications from admin -->
+      <div id="formNotifList"></div>
+    </div>
+  </div>
+
+    </div>
+  </div>
+
+  <!-- CALENDAR DAY CLICK MODAL -->
+  <div id="calendarDayModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:1010; justify-content:center; align-items:center; backdrop-filter:blur(6px);">
+    <div class="card" style="width:440px; max-height:80vh; overflow-y:auto; animation: fadeIn 0.3s ease;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <h3 id="calDayModalTitle" style="border:none; padding:0; margin:0; font-size:16px;">Events</h3>
+        <span onclick="closeModal('calendarDayModal')" style="cursor:pointer; color:#94a3b8; font-size:22px; line-height:1;">&times;</span>
+      </div>
+      <div id="calDayModalEvents" style="margin-bottom:16px;"></div>
+      <div id="calDayAdminAddForm" style="display:none; border-top:1px solid #e2e8f0; padding-top:16px;">
+        <h4 style="font-size:13px; font-weight:700; color:#db2777; margin-bottom:12px;">&#43; Add Event for this Date</h4>
+        <input type="hidden" id="calDaySelectedDate">
+        <input type="text" id="calDayEventTitle" placeholder="Event title e.g. Mid-term Exam" style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:10px; font-family:Inter; font-size:14px;">
+        <select id="calDayEventType" style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:14px; font-family:Inter; font-size:14px;">
+          <option value="holiday">🔴 Holiday</option>
+          <option value="function">🟣 College Function</option>
+          <option value="exam">🟢 Exam / Test</option>
+        </select>
+        <button class="btn-action" onclick="saveCalDayEvent()" style="width:auto; padding:10px 28px; margin:0;">&#128197; Save Event</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GLOBAL FLOATING HUD (REFERENCE IMAGE INSPIRED) -->
+  <div class="fab-container">
+    <div class="fab-item" onclick="openModal('settingsModal')" title="System Settings">⚙️</div>
+    <div class="fab-item help" onclick="alert('Student Help Desk: Contact +91 99281 77301')" title="Help & Support">❓</div>
+  </div>
+
+  <!-- CUSTOM MODAL ALERT (MIDNIGHT EMERALD) -->
+  <div id="customAlertOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:11000; justify-content:center; align-items:center; backdrop-filter:blur(10px);">
+    <div class="card" id="customAlertBox" style="width:400px; padding:30px; border-radius:32px; background:#0f172a; border:1px solid rgba(255,255,255,0.1); box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); animation:modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align:center;">
+       <div id="alertIcon" style="font-size:50px; margin-bottom:15px;">✅</div>
+       <h3 id="alertTitle" style="color:#fff; margin-bottom:10px; font-size:20px;">Success!</h3>
+       <div id="alertContent" style="color:#94a3b8; font-size:14px; margin-bottom:25px; line-height:1.6;">
+          <!-- Dynamic details filled by script.js -->
+       </div>
+       <button class="btn-action" onclick="closeCustomAlert()" style="width:100%; height:48px; border-radius:16px; background:rgba(16, 185, 129, 0.15); color:#10b981; border:1px solid #10b981; font-weight:700;">OK</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    window.addEventListener('load', function() {
+      if (window.lucide) lucide.createIcons();
+      // Initialize Back to Top
+      const btt = document.getElementById('backToTop');
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 300) btt.classList.add('show');
+        else btt.classList.remove('show');
+      });
+    });
+  </script>
+
+  <!-- PREMIUM TOAST CONTAINER -->
+  <div id="toastContainer" class="sharma-toast"></div>
+
+  <!-- BACK TO TOP -->
+  <div id="backToTop" onclick="window.scrollTo({top:0, behavior:'smooth'})" title="Back to Top">
+    <i data-lucide="chevron-up"></i>
+  </div>
+</body>
+
+</html>
