@@ -330,21 +330,57 @@ function backToStep1() {
 }
 
 async function handleRegistration() {
-    const rollNo = document.getElementById('regRollNo').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const pass = document.getElementById('regPass').value;
+    const rollNo      = document.getElementById('regRollNo').value.trim();
+    const email       = document.getElementById('regEmail').value.trim();
+    const pass        = document.getElementById('regPass').value;
     const confirmPass = document.getElementById('regConfirmPass').value;
-    const question = document.getElementById('regSecurityQuestion').value;
-    const answer = document.getElementById('regSecurityAnswer').value.trim().toLowerCase();
+    const question    = document.getElementById('regSecurityQuestion').value;
+    const answer      = document.getElementById('regSecurityAnswer').value.trim().toLowerCase();
 
-    if (!rollNo || !email || !pass || !confirmPass || !question || !answer) return showToast('Please fill all mandatory fields, including security question.', 'warning');
-    if (pass.length < 6) return showToast('Password must be at least 6 characters.', 'warning');
-    if (pass !== confirmPass) return showToast('Passwords do not match!', 'error');
+    if (!rollNo || !email || !pass || !confirmPass || !question || !answer)
+        return showToast('Please fill all mandatory fields, including security question.', 'warning');
+    if (pass.length < 6)
+        return showToast('Password must be at least 6 characters.', 'warning');
+    if (pass !== confirmPass)
+        return showToast('Passwords do not match!', 'error');
 
     const btn = document.getElementById('regSubmitBtn');
     btn.innerText = 'Creating Account...';
     btn.disabled = true;
 
+    // Collect form values
+    const firstName  = document.getElementById('regFirstName').value.trim();
+    const lastName   = document.getElementById('regLastName').value.trim();
+    const middleName = document.getElementById('regMiddleName') ? document.getElementById('regMiddleName').value.trim() : '';
+    const course     = document.getElementById('regCourse').value;
+    const year       = document.getElementById('regYear').value.trim();
+
+    // ── 1. MYSQL REGISTRATION ─────────────────────────────────────
+    let mysqlSuccess = false;
+    try {
+        const mysqlRes = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                rollNo, email, password: pass,
+                firstName, middleName, lastName,
+                course, year, role: selectedRole
+            })
+        });
+        const mysqlData = await mysqlRes.json();
+        if (mysqlRes.ok && mysqlData.success) {
+            mysqlSuccess = true;
+            console.log('MySQL registration succeeded:', mysqlData.message);
+        } else {
+            // Duplicate / conflict error — stop here
+            showToast(mysqlData.message || 'Registration failed.', 'error');
+            return;
+        }
+    } catch (mysqlErr) {
+        console.warn('MySQL register endpoint unreachable, falling back to Firebase only:', mysqlErr.message);
+    }
+
+    // ── 2. FIREBASE REGISTRATION (parallel sync) ──────────────────
     try {
         // AUTOSYNC: Check collegeRecords for official data provided by Admin
         let officialData = {};
@@ -352,42 +388,41 @@ async function handleRegistration() {
             const collegeDoc = await window.fbGetDoc(window.fbDoc(window.firebaseDb, 'collegeRecords', rollNo));
             if (collegeDoc.exists()) {
                 officialData = collegeDoc.data();
-                console.log("Autosync: Official record found for", rollNo);
+                console.log('Autosync: Official record found for', rollNo);
             }
-        } catch(e) { console.warn("Autosync check failed:", e); }
+        } catch(e) { console.warn('Autosync check failed:', e); }
 
         const userCredential = await window.fbSignUp(window.firebaseAuth, email, pass);
         const user = userCredential.user;
 
-        // Merge form data with official college data (Priority set to Official records)
+        // Merge form data with official college data (official data takes priority)
         const profileData = {
-            uid: user.uid,
-            firstName: officialData.firstName || document.getElementById('regFirstName').value.trim(),
-            lastName: officialData.lastName || document.getElementById('regLastName').value.trim(),
-            middleName: officialData.middleName || document.getElementById('regMiddleName').value.trim(),
-            rollNo: rollNo, // Stores EmpID for faculty or RollNo for students
-            course: officialData.course || document.getElementById('regCourse').value, // Stores Dept for faculty
-            year: officialData.year || document.getElementById('regYear').value.trim(), // Stores Joining Year for faculty
-            email: email,
-            role: selectedRole,
-            photoURL: officialData.photoURL || '',
+            uid:              user.uid,
+            firstName:        officialData.firstName  || firstName,
+            lastName:         officialData.lastName   || lastName,
+            middleName:       officialData.middleName || middleName,
+            rollNo,
+            course:           officialData.course  || course,
+            year:             officialData.year    || year,
+            email,
+            role:             selectedRole,
+            photoURL:         officialData.photoURL || '',
             securityQuestion: question,
-            securityAnswer: answer,
-            createdAt: new Date().toISOString()
+            securityAnswer:   answer,
+            createdAt:        new Date().toISOString()
         };
 
-        // Create the portal account doc linked to UID
         await window.fbSetDoc(window.fbDoc(window.firebaseDb, 'users', user.uid), profileData);
-
-        alert('✅ Account Created! Details have been synced from college records.');
-        toggleAuthMode();
-    } catch (err) {
-        console.error('Signup Error:', err);
-        showToast(err.message || 'Failed to create account.', 'error');
-    } finally {
-        btn.innerText = 'Finish & Create';
-        btn.disabled = false;
+        console.log('Firebase registration succeeded.');
+    } catch (fbErr) {
+        console.warn('Firebase registration error (MySQL already saved):', fbErr.message);
     }
+
+    showToast('✅ Account Created! You can now log in.', 'success');
+    setTimeout(() => toggleAuthMode(), 1500);
+
+    btn.innerText = 'Finish & Create';
+    btn.disabled = false;
 }
 
 // REMOVED seedStudentDemoData entirely per user instructions for live data only.
@@ -452,80 +487,99 @@ async function handleRollNoDetection(val) {
 // Handle the Login Logic
 async function handleAuth() {
     const email = document.getElementById('userEmail').value.trim();
-    const pass = document.getElementById('userPass').value;
-    const btn = document.getElementById('authSubmitBtn');
+    const pass  = document.getElementById('userPass').value;
+    const btn   = document.getElementById('authSubmitBtn');
 
     if (!email || !pass) {
-        showToast("Please enter email and password.", "warning");
+        showToast('Please enter email and password.', 'warning');
         return;
     }
 
-    if (btn) {
-        btn.innerText = "Authenticating...";
-        btn.disabled = true;
-    }
+    if (btn) { btn.innerText = 'Authenticating...'; btn.disabled = true; }
 
     try {
+        // ── 1. MYSQL LOGIN (primary verification) ────────────────────
+        let mysqlUser = null;
+        try {
+            const mysqlRes = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password: pass })
+            });
+            const mysqlData = await mysqlRes.json();
+
+            if (mysqlRes.ok && mysqlData.success) {
+                mysqlUser = mysqlData.user;
+                // Store JWT for subsequent protected API calls
+                localStorage.setItem('erp_token', mysqlData.token);
+                console.log('MySQL login verified:', mysqlData.message);
+
+                // If the selected role in the UI does NOT match the registered role, block login
+                if (mysqlUser.role && mysqlUser.role !== selectedRole) {
+                    showToast(`Access denied. Your account role is "${mysqlUser.role}". Please select the correct role tab.`, 'error');
+                    if (btn) { btn.innerText = 'Login'; btn.disabled = false; }
+                    return;
+                }
+            } else {
+                // MySQL returned an explicit auth error (wrong password / not found) — block login
+                showToast(mysqlData.message || 'Login failed. Please check your credentials.', 'error');
+                if (btn) { btn.innerText = 'Login'; btn.disabled = false; }
+                return;
+            }
+        } catch (mysqlErr) {
+            // MySQL server unreachable — fall through to Firebase only
+            console.warn('MySQL login endpoint unreachable, falling back to Firebase:', mysqlErr.message);
+        }
+
+        // ── 2. FIREBASE LOGIN (parallel / fallback) ───────────────────
         let user = null;
         try {
             const userCred = await window.fbSignIn(window.firebaseAuth, email, pass);
             user = userCred.user;
         } catch (authErr) {
-            console.warn("Primary fbSignIn failed, attempting auto-registration:", authErr);
-            if (authErr.code === 'auth/user-not-found' || authErr.code === 'auth/invalid-credential') {
-                try {
-                    const newCred = await window.fbSignUp(window.firebaseAuth, email, pass);
-                    user = newCred.user;
-                    // Seed initial user profile in Firestore
-                    const initialProfile = {
-                        uid: user.uid,
-                        firstName: email.split('@')[0].toUpperCase(),
-                        lastName: "USER",
-                        rollNo: email.split('@')[0],
-                        course: selectedRole === 'student' ? 'BCA' : 'IT',
-                        year: '2025-2028',
-                        email: email,
-                        role: selectedRole,
-                        createdAt: new Date().toISOString()
-                    };
-                    await window.fbSetDoc(window.fbDoc(window.firebaseDb, 'users', user.uid), initialProfile);
-                } catch (signUpErr) {
-                    console.warn("Auto-signup attempt failed:", signUpErr);
-                }
-            }
+            console.warn('Firebase login failed:', authErr.code);
+            // If MySQL already verified the user, proceed without Firebase
         }
 
+        // ── 3. BUILD PROFILE & SHOW DASHBOARD ────────────────────────
         // Hide Login Screen
         document.getElementById('loginSection').style.display = 'none';
 
-        // Link profile if user authenticated
         if (user) {
             await syncUserProfile(user.uid, email);
-        } else {
-            // Fallback demo profile if Firebase auth is bypassed
+        } else if (mysqlUser) {
+            // MySQL verified but Firebase unavailable — build profile from MySQL response
             currentUserProfile = {
-                uid: 'demo-' + Date.now(),
-                firstName: email.split('@')[0] || 'User',
-                lastName: selectedRole.toUpperCase(),
-                rollNo: '2025018100918714',
-                course: 'BCA',
-                year: '2025-2028',
-                email: email,
-                role: selectedRole
+                uid:        'mysql-' + mysqlUser.id,
+                firstName:  mysqlUser.firstName  || email.split('@')[0],
+                middleName: mysqlUser.middleName  || '',
+                lastName:   mysqlUser.lastName    || '',
+                rollNo:     mysqlUser.rollNo      || '',
+                course:     mysqlUser.course      || '',
+                year:       mysqlUser.year        || '',
+                email:      mysqlUser.email,
+                role:       mysqlUser.role || selectedRole,
+                photoURL:   mysqlUser.photoURL || ''
             };
             populateDashboard(currentUserProfile);
+            showToast(`Welcome back, ${currentUserProfile.firstName}!`, 'success');
+        } else {
+            showToast('Authentication failed. Please try again.', 'error');
+            if (btn) { btn.innerText = 'Login'; btn.disabled = false; }
+            return;
         }
 
-        // Role-Based UI Initialization
-        if (selectedRole === 'student') {
-            document.body.classList.add('body-logged-in'); 
+        // ── 4. ROLE-BASED UI INIT ─────────────────────────────────────
+        const activeRole = (currentUserProfile && currentUserProfile.role) || selectedRole;
+
+        if (activeRole === 'student') {
+            document.body.classList.add('body-logged-in');
             document.getElementById('mainDashboard').style.display = 'block';
             if (user) await syncUserProfile(user.uid);
             loadStudentDoubtsHistory();
             if (currentUserProfile && currentUserProfile.rollNo) {
-               setupNotificationsListener(currentUserProfile.rollNo);
+                setupNotificationsListener(currentUserProfile.rollNo);
             }
-            
             // SIDEBAR COLLAPSED BY DEFAULT FOR 'DASHBOARD FIRST' LOOK
             const dashboard = document.getElementById('mainDashboard');
             dashboard.classList.add('collapsed-view');
@@ -534,12 +588,12 @@ async function handleAuth() {
 
             setTimeout(() => {
                 initAttendancePieChart();
-                startStudentEventsListener(); // Real-time events sync
-                loadKTTracker(); // Real-time KT Tracking
+                startStudentEventsListener();
+                loadKTTracker();
                 renderAcademicCalendar();
             }, 100);
         }
-        else if (selectedRole === 'admin') {
+        else if (activeRole === 'admin') {
             document.body.classList.add('body-logged-in');
             document.getElementById('adminDashboard').style.display = 'block';
             const dashboard = document.getElementById('adminDashboard');
@@ -548,14 +602,14 @@ async function handleAuth() {
             if (sidebar) sidebar.classList.add('collapsed');
 
             if (typeof initAdminChart === 'function') initAdminChart();
-            startAdminEventsListener(); // Real-time events sync
-            loadAdminCalEvents(); // Calendar Manager
+            startAdminEventsListener();
+            loadAdminCalEvents();
             loadAdminForms();
             startAdminStatsListener();
             const adminHud = document.getElementById('adminCalendarManager');
             if (adminHud) adminHud.style.display = 'block';
         }
-        else if (selectedRole === 'college') {
+        else if (activeRole === 'college') {
             document.body.classList.add('body-logged-in');
             document.getElementById('collegeDashboard').style.display = 'block';
             const dashboard = document.getElementById('collegeDashboard');
@@ -571,12 +625,9 @@ async function handleAuth() {
             loadFacultyStudents();
         }
     } catch(err) {
-        console.error("Auth Error: ", err);
-        showResultModal("Authentication Error", err.message || "Invalid authentication attempt.", "error");
-        if (btn) {
-            btn.innerText = "Login";
-            btn.disabled = false;
-        }
+        console.error('Auth Error:', err);
+        showResultModal('Authentication Error', err.message || 'Invalid authentication attempt.', 'error');
+        if (btn) { btn.innerText = 'Login'; btn.disabled = false; }
     }
 }
 
